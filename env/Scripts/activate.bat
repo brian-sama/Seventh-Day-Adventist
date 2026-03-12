@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\thabe\Desktop\programming projects\python\Seventh Day Adventist\env
+set VIRTUAL_ENV=C:\Users\Mlungisi Moyo\3D Objects\Personal Projects\Seventh-Day-Adventist\env
 
 if not defined PROMPT set PROMPT=$P$G
 

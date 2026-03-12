@@ -1,0 +1,27 @@
+{
+  "name": "seventh-day-adventist",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "backend": "cd backend && ..\\env\\Scripts\\python manage.py runserver 8000",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"magenta,cyan\" \"npm run backend\" \"npm run frontend\"",
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"magenta,cyan\" \"npm run backend\" \"npm run frontend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thxbelo/Seventh-Day-Adventist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/thxbelo/Seventh-Day-Adventist/issues"
+  },
+  "homepage": "https://github.com/thxbelo/Seventh-Day-Adventist#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
