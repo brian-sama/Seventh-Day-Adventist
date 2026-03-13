@@ -43,8 +43,9 @@ def seed_production_users(apps, schema_editor):
 
     for user_data in users:
         password = user_data.pop('password')
-        user, created = User.objects.get_or_create(username=user_data['username'], defaults=user_data)
-        user.email = user_data['email']  # Update email if user already exists
+        # Use email as the unique identifier for lookup
+        user, created = User.objects.get_or_create(email=user_data['email'], defaults=user_data)
+        user.username = user_data['username']
         user.set_password(password)
         user.save()
 
