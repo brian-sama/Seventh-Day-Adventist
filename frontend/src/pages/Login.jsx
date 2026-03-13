@@ -21,7 +21,7 @@ const Login = () => {
             const response = await fetch('/api/token/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email: username, password })
             });
 
             const tokens = await response.json();
@@ -115,16 +115,16 @@ const Login = () => {
                         )}
                         
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">Username</label>
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">Email Address</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none group-focus-within:text-sda-blue transition-colors duration-200 text-slate-400">
                                     <User className="h-5 w-5" />
                                 </div>
                                 <input
-                                    type="text"
+                                    type="email"
                                     required
                                     className="block w-full pl-12 pr-4 py-4 border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white rounded-2xl focus:ring-sda-blue/20 focus:border-sda-blue outline-none transition-all duration-300 placeholder:text-slate-400"
-                                    placeholder="Enter username"
+                                    placeholder="clerk@magwegwewestsda.co.zw"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                 />
