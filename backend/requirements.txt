@@ -4,6 +4,7 @@ django-cors-headers
 djangorestframework-simplejwt
 psycopg2-binary
 python-dotenv
+dj-database-url
 qrcode
 PyPDF2
 reportlab
