@@ -1,14 +1,9 @@
-import os
-import django
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-django.setup()
-
+from django.db import migrations
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
-
-def seed():
+def seed_production_users(apps, schema_editor):
+    User = get_user_model()
+    
     users = [
         {
             'username': 'system_admin',
@@ -49,12 +44,19 @@ def seed():
     for user_data in users:
         password = user_data.pop('password')
         user, created = User.objects.get_or_create(username=user_data['username'], defaults=user_data)
+        user.email = user_data['email']  # Update email if user already exists
         user.set_password(password)
         user.save()
-        if created:
-            print(f"Created user: {user.username} with role: {user.role}")
-        else:
-            print(f"Updated password for user: {user.username}")
 
-if __name__ == '__main__':
-    seed()
+def remove_production_users(apps, schema_editor):
+    pass # No need to remove specifically for this task
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('api', '0006_document_converted_pdf_servicerequest_final_document_and_more'),
+    ]
+
+    operations = [
+        migrations.RunPython(seed_production_users, remove_production_users),
+    ]
