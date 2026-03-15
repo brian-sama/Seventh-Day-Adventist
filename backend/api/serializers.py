@@ -43,6 +43,8 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
     document_id = serializers.PrimaryKeyRelatedField(
         queryset=Document.objects.all(), source='document', write_only=True
     )
+    clerk_name = serializers.CharField(source='clerk.username', read_only=True)
+    elder_name = serializers.CharField(source='elder.username', read_only=True)
     pastor_name = serializers.CharField(source='pastor.username', read_only=True)
     document_title = serializers.CharField(source='document.title', read_only=True)
     document_hash = serializers.CharField(source='document.document_hash', read_only=True)

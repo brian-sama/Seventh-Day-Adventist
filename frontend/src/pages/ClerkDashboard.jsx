@@ -285,7 +285,7 @@ const ClerkDashboard = () => {
                 <input
                   type="text" required value={title}
                   onChange={e => setTitle(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none text-slate-900"
                   placeholder="e.g. Funeral Service 12th March"
                 />
               </div>
@@ -294,7 +294,7 @@ const ClerkDashboard = () => {
                 <input
                   type="file" required accept=".pdf,.doc,.docx"
                   onChange={e => setFile(e.target.files[0])}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 text-slate-900"
                 />
               </div>
               <div className="pt-4 flex justify-end space-x-3">
