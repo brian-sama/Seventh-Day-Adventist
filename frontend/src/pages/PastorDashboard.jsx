@@ -10,6 +10,7 @@ const PastorDashboard = () => {
     const [loadingAction, setLoadingAction] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
     const [selectedRequest, setSelectedRequest] = useState(null);
+    const [rejectingId, setRejectingId] = useState(null);
 
     useEffect(() => { loadRequests(); }, []);
 
