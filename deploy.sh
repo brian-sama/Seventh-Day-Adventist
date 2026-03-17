@@ -11,10 +11,12 @@
 # Exit on error
 set -e
 
-PROJECT_ROOT="/var/www/Seventh-Day-Adventist"
+# Detect project root (directory where this script is located)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$PROJECT_ROOT/env"
 
 echo ">>> Starting deployment at $(date)"
+echo ">>> Project Root: $PROJECT_ROOT"
 
 # 1. Update Codebase
 echo ">>> Pulling latest changes from Git..."
