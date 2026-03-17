@@ -157,10 +157,11 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
     def download(self, request, pk=None):
         mr = self.get_object()
         if not mr.final_pdf:
-            return Response({'error': 'PDF not generated yet. Approvals might be incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'PDF not generated yet. Approvals or Rejection might be incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
         
         from django.http import FileResponse
-        return FileResponse(mr.final_pdf, as_attachment=True, filename=f"Request_{mr.id}.pdf")
+        prefix = "Approval" if mr.status == 'approved' else "Rejection"
+        return FileResponse(mr.final_pdf, as_attachment=True, filename=f"{prefix}_Request_{mr.id}.pdf")
 
     @action(detail=True, methods=['post'], permission_classes=[IsElderOrPastor])
     def reject(self, request, pk=None):
@@ -169,7 +170,18 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
         mr.status = 'rejected'
         mr.rejection_reason = reason
         mr.save()
-        _log(request.user, "Rejected request", mr, {"reason": reason})
+
+        # Generate Rejection PDF immediately
+        from .pdf_generator import generate_ministry_request_pdf
+        pdf_path = generate_ministry_request_pdf(mr)
+        if pdf_path:
+            from django.core.files.base import ContentFile
+            with open(pdf_path, 'rb') as f:
+                mr.final_pdf.save(f'rejection_{mr.id}.pdf', ContentFile(f.read()), save=True)
+
+        _log(request.user, "Rejected request and generated rejection PDF", mr, {"reason": reason})
+        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} has been REJECTED. Rejection letter generated.")
+        
         return Response({'status': 'Rejected.'})
 
     @action(detail=True, methods=['get'])

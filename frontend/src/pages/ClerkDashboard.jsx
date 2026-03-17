@@ -3,7 +3,7 @@ import { fetchApi } from '../utils/api';
 import { 
   FilePlus, FileText, CheckCircle, Clock, XCircle, 
   RefreshCw, Send, Archive, Eye, MapPin, UploadCloud,
-  ChevronRight, LayoutDashboard, FileBarChart
+  ChevronRight, LayoutDashboard, FileBarChart, Stamp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';

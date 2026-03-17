@@ -42,13 +42,15 @@ const ElderDashboard = () => {
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-          <div>
-            <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight flex items-center gap-3">
-              <PenTool className="text-emerald-500" />
-              Elder's Dashboard
-            </h1>
-            <p className="text-[var(--text-secondary)] mt-1">Review and sign ministry requests approved by the Pastor.</p>
+          <div className="mb-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-emerald-500/10 rounded-xl">
+              <PenTool className="text-emerald-500" size={28} />
+            </div>
+            <h1 className="text-4xl font-black text-slate-100 tracking-tight">Elder's Dashboard</h1>
           </div>
+          <p className="text-slate-400 text-lg">Review and sign ministry requests from the Clerk.</p>
+        </div>
 
           <div className="flex bg-[var(--bg-secondary)] p-1 rounded-2xl border border-[var(--border-color)] shadow-xl">
             {[
