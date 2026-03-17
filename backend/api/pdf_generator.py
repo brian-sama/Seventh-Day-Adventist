@@ -150,9 +150,14 @@ def generate_ministry_request_pdf(mr):
         try: pastor_img = Image(pastor_sig.signature_image.path, 1.2*inch, 0.5*inch)
         except: pass
 
+    # Get names for signature block
+    p_name = "...................."
+    if mr.pastor:
+        p_name = mr.pastor.get_full_name() or mr.pastor.username
+
     sig_data = [
         ["(Head Elder)", "(Clerk)", "(District Pastor)"],
-        [f"Mr. {mr.elder_name or '....................'}", f"....................", f"Mr/Dr. {mr.pastor_name or '....................'}"],
+        [f"Mr. {mr.elder_name or '....................'}", f"....................", f"Mr/Dr. {p_name}"],
         ["Sign: ", "Sign: ", "Sign: "],
         [elder_img, clerk_img, pastor_img],
         ["Contact: ..................", "Contact: ..................", "Contact: .................."]

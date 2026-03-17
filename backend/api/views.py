@@ -159,9 +159,17 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'Signed by Elder.'})
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
     def download(self, request, pk=None):
+        """Allows downloading the PDF. Requires either auth or a valid verification_uuid."""
         mr = self.get_object()
+        
+        # Security check: If not authenticated, must provide the verification UUID
+        if not request.user.is_authenticated:
+            v_uuid = request.query_params.get('vid')
+            if not v_uuid or str(v_uuid) != str(mr.verification_uuid):
+                return Response({'error': 'Authentication required or invalid verification ID.'}, status=status.HTTP_401_UNAUTHORIZED)
+
         if not mr.final_pdf:
             return Response({'error': 'PDF not generated yet. Approvals or Rejection might be incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
         

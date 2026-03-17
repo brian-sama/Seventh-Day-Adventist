@@ -219,7 +219,7 @@ const RequestDetailView = ({ requestId, onClose, userRole }) => {
 
           {request.final_pdf && (
             <a 
-              href={`/api/ministry-requests/${request.id}/download/`}
+              href={`/api/ministry-requests/${request.id}/download/?vid=${request.verification_uuid}`}
               className={`flex-1 ${request.status === 'rejected' ? 'bg-red-900/40 hover:bg-red-800' : 'bg-slate-800 hover:bg-slate-700'} text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg`}
             >
               <Download size={20} /> Download {request.status === 'rejected' ? 'Rejection' : 'Official'} PDF
