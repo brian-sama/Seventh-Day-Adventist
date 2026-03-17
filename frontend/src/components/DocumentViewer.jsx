@@ -178,7 +178,7 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-slate-400">
                                     <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
-                                    <p className="text-sm font-bold uppercase tracking-widest">Generating Preview...</p>
+                                    <p className="text-sm font-bold uppercase tracking-widest text-[#1e3a8a]">Generating PDF Preview...</p>
                                 </div>
                             )}
                             {/* Overlay Controls */}

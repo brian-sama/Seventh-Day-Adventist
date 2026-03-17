@@ -112,24 +112,34 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         # If it's a DOCX and we want an inline preview, serve the converted PDF if available
         file_to_serve = doc.file
-        if as_inline and doc.file.name.endswith(('.docx', '.doc')):
-            if not doc.converted_pdf:
-                # Try to convert on the fly if not already converted
-                from .pdf_service import convert_docx_to_pdf
-                pdf_filename = os.path.splitext(doc.file.name)[0] + ".pdf"
-                pdf_path = os.path.join(os.path.dirname(doc.file.path), pdf_filename)
+        if as_inline:
+            if doc.file.name.endswith(('.docx', '.doc')):
+                if not doc.converted_pdf:
+                    # Try to convert on the fly
+                    from .pdf_service import convert_docx_to_pdf
+                    from django.conf import settings
+                    
+                    pdf_filename = os.path.splitext(doc.file.name)[0] + ".pdf"
+                    pdf_path = os.path.join(os.path.dirname(doc.file.path), pdf_filename)
+                    
+                    converted_path = convert_docx_to_pdf(doc.file.path, pdf_path)
+                    if converted_path:
+                        rel_path = os.path.relpath(converted_path, start=settings.MEDIA_ROOT)
+                        doc.converted_pdf = rel_path
+                        doc.save()
                 
-                converted_path = convert_docx_to_pdf(doc.file.path, pdf_path)
-                if converted_path:
-                    # Save the relative path to models
-                    rel_path = os.path.relpath(converted_path, start=os.path.join(os.getcwd(), 'media'))
-                    doc.converted_pdf = rel_path
-                    doc.save()
+                if doc.converted_pdf:
+                    file_to_serve = doc.converted_pdf
+                else:
+                    return Response({'error': 'Document conversion to PDF failed. Please download for manual review.'}, 
+                                    status=status.HTTP_400_BAD_REQUEST)
             
-            if doc.converted_pdf:
-                file_to_serve = doc.converted_pdf
-            
-        content_type = 'application/pdf' if file_to_serve.name.endswith('.pdf') else None
+            # Final safety check: if still not a PDF and requested inline, return error
+            if not file_to_serve.name.lower().endswith('.pdf'):
+                return Response({'error': 'Inline preview only supported for PDF documents.'}, 
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        content_type = 'application/pdf' if file_to_serve.name.lower().endswith('.pdf') else None
         return FileResponse(file_to_serve, as_attachment=not as_inline, filename=os.path.basename(file_to_serve.name), content_type=content_type)
 
 
