@@ -119,12 +119,18 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             )
 
         # Generate the PDF at this final step
-        from .pdf_generator import generate_ministry_request_pdf
-        pdf_path = generate_ministry_request_pdf(mr)
-        if pdf_path:
-            from django.core.files.base import ContentFile
-            with open(pdf_path, 'rb') as f:
-                mr.final_pdf.save(f'final_{mr.id}.pdf', ContentFile(f.read()), save=True)
+        try:
+            from .pdf_generator import generate_ministry_request_pdf
+            pdf_path = generate_ministry_request_pdf(mr)
+            if pdf_path:
+                from django.core.files.base import ContentFile
+                with open(pdf_path, 'rb') as f:
+                    mr.final_pdf.save(f'final_{mr.id}.pdf', ContentFile(f.read()), save=True)
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            _log(request.user, f"PDF Generation Error: {str(e)}", mr, {"traceback": error_details})
+            return Response({'error': f'PDF Generation failed: {str(e)}', 'details': error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         _log(request.user, "Finalized and Stamped by Clerk", mr)
         return Response({'status': 'Finalized and Stamped.'})
