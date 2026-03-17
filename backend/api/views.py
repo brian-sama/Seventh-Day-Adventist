@@ -166,11 +166,20 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
         """Allows downloading the PDF. Requires either auth or a valid verification_uuid."""
         mr = self.get_object()
         
-        # Security check: If not authenticated, must provide the verification UUID
+        # Debug logging for authentication failure
         if not request.user.is_authenticated:
-            v_uuid = request.query_params.get('vid')
-            if not v_uuid or str(v_uuid) != str(mr.verification_uuid):
-                return Response({'error': 'Authentication required or invalid verification ID.'}, status=status.HTTP_401_UNAUTHORIZED)
+            v_uuid = request.query_params.get('vid', '').strip().lower()
+            expected_uuid = str(mr.verification_uuid).strip().lower()
+            
+            if not v_uuid or v_uuid != expected_uuid:
+                print(f"DEBUG: Download Auth Failed for MR #{mr.id}")
+                print(f"DEBUG: Received vid: '{v_uuid}'")
+                print(f"DEBUG: Expected vid: '{expected_uuid}'")
+                return Response({
+                    'error': 'Authentication required or invalid verification ID.',
+                    'received_vid': v_uuid,
+                    'is_authenticated': request.user.is_authenticated
+                }, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             if not mr.final_pdf:
