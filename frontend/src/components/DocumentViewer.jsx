@@ -23,11 +23,16 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('actions'); // actions, history, comments
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     useEffect(() => {
         if (request?.id) {
             loadDetails();
+            loadPreview();
         }
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
     }, [request?.id]);
 
     const loadDetails = async () => {
@@ -39,6 +44,21 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
             setComments(commentData);
         } catch (err) {
             console.error('Failed to load viewer details', err);
+        }
+    };
+
+    const loadPreview = async () => {
+        const token = localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`/api/documents/${request.document.id}/download/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Preview failed');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+        } catch (err) {
+            console.error('Failed to load preview', err);
         }
     };
 
@@ -121,14 +141,24 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                     {/* 2. CENTER PANEL (70%: Document Preview) */}
                     <main className="flex-1 bg-slate-200/50 flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden">
                         <div className="w-full h-full max-w-4xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative group">
-                            <iframe 
-                                src={`/api/documents/${request.document.id}/download/`}
-                                className="w-full h-full border-0"
-                                title="Document Preview"
-                            />
+                            {previewUrl ? (
+                                <iframe 
+                                    src={previewUrl}
+                                    className="w-full h-full border-0"
+                                    title="Document Preview"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-slate-400">
+                                    <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+                                    <p className="text-sm font-bold uppercase tracking-widest">Loading Preview...</p>
+                                </div>
+                            )}
                             {/* Overlay Controls */}
                             <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="p-2 bg-white/90 backdrop-blur shadow-md rounded-xl hover:bg-white text-slate-600">
+                                <button 
+                                    onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                                    className="p-2 bg-white/90 backdrop-blur shadow-md rounded-xl hover:bg-white text-slate-600"
+                                >
                                     <Maximize2 className="w-4 h-4" />
                                 </button>
                                 {isFinalized && (

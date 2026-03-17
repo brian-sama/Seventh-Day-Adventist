@@ -209,7 +209,7 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
                     target_path,
                     request.user.signature_image.path,
                     target_path,
-                    x=130, y=140, # Precise Head Elder Sign line anchor
+                    x=150, y=170, # Precise Head Elder Sign line anchor
                     width=100, height=35
                 )
                 Signature.objects.get_or_create(
@@ -259,7 +259,7 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
                     target_path,
                     request.user.signature_image.path,
                     target_path,
-                    x=130, y=60, # Precise Pastor Sign line anchor (lower on page)
+                    x=150, y=90, # Precise Pastor Sign line anchor (lower on page)
                     width=100, height=35
                 )
                 
