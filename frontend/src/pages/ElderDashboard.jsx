@@ -33,24 +33,24 @@ const ElderDashboard = () => {
   };
 
   const filteredRequests = activeTab === 'pending' 
-    ? requests.filter(r => r.pastor_approved && !r.elder_signed && r.status === 'pending')
+    ? requests.filter(r => !r.elder_signed && r.status === 'pending')
     : requests.filter(r => r.elder_signed || r.status === 'rejected');
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 pb-20">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-secondary)] pb-20 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+            <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight flex items-center gap-3">
               <PenTool className="text-emerald-500" />
               Elder's Dashboard
             </h1>
-            <p className="text-slate-400 mt-1">Review and sign ministry requests approved by the Pastor.</p>
+            <p className="text-[var(--text-secondary)] mt-1">Review and sign ministry requests approved by the Pastor.</p>
           </div>
 
-          <div className="flex bg-slate-800/50 p-1 rounded-2xl border border-slate-700 shadow-xl">
+          <div className="flex bg-[var(--bg-secondary)] p-1 rounded-2xl border border-[var(--border-color)] shadow-xl">
             {[
               { id: 'pending', label: 'Needs Signature', icon: PenTool },
               { id: 'history', label: 'History', icon: CheckCircle }
@@ -80,16 +80,16 @@ const ElderDashboard = () => {
             {filteredRequests.map(req => (
               <div 
                 key={req.id} 
-                className="bg-slate-800/40 p-5 rounded-3xl border border-slate-700/50 flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-slate-800/60 transition-all border-l-4 border-l-emerald-500 shadow-xl group"
+                className="bg-[var(--bg-secondary)] p-5 rounded-3xl border border-[var(--border-color)] flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-[var(--bg-primary)] transition-all border-l-4 border-l-emerald-500 shadow-xl group"
               >
                 <div className="flex items-center gap-5 w-full md:w-auto">
                   <div className={`p-4 rounded-full ${req.status === 'rejected' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
                     {req.status === 'rejected' ? <XCircle size={24} /> : <PenTool size={24} />}
                   </div>
                   <div>
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Service Request</div>
-                    <h3 className="text-xl font-bold text-white tracking-tight">{req.invited_name}</h3>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                    <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest leading-none mb-1">Service Request</div>
+                    <h3 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">{req.invited_name}</h3>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-secondary)]">
                       <span className="flex items-center gap-1 font-bold"><Clock size={12} /> {new Date(req.event_date).toLocaleDateString()}</span>
                       <span className="flex items-center gap-1"><LayoutDashboard size={12} /> {req.receiving_church}</span>
                     </div>

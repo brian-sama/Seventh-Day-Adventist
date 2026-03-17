@@ -166,23 +166,23 @@ const RequestDetailView = ({ requestId, onClose, userRole }) => {
 
         {/* Footer Actions */}
         <div className="px-8 py-6 border-t border-slate-800 bg-slate-900/50 flex flex-wrap gap-4">
-          {/* Pastor Action */}
-          {userRole === 'pastor' && !request.pastor_approved && request.status === 'pending' && (
-            <button 
-              onClick={() => handleAction('approve')}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
-            >
-              <Stamp size={20} /> Approve & Apply Stamp
-            </button>
-          )}
-
-          {/* Elder Action */}
-          {userRole === 'elder' && request.pastor_approved && !request.elder_signed && request.status === 'pending' && (
+          {/* Elder Action - Now first after Clerk */}
+          {userRole === 'elder' && !request.elder_signed && request.status === 'pending' && (
             <button 
               onClick={() => handleAction('sign')}
               className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
             >
-              <PenTool size={20} /> Sign & Finalize
+              <PenTool size={20} /> Sign Request
+            </button>
+          )}
+
+          {/* Pastor Action - Now last stage */}
+          {userRole === 'pastor' && request.elder_signed && !request.pastor_approved && request.status === 'pending' && (
+            <button 
+              onClick={() => handleAction('approve')}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+            >
+              <Stamp size={20} /> Approve & Finalize
             </button>
           )}
 

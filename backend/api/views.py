@@ -71,9 +71,11 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(clerk=user)
         elif user.role == 'elder':
             from django.db.models import Q
-            return self.queryset.filter(Q(pastor_approved=True) | Q(elder=user))
+            # Elders see pending requests that they haven't signed yet
+            return self.queryset.filter(status='pending', elder_signed=False)
         elif user.role == 'pastor':
-            return self.queryset
+            # Pastors see requests that have been signed by an elder
+            return self.queryset.filter(elder_signed=True, pastor_approved=False)
         return self.queryset
 
     def perform_create(self, serializer):
@@ -85,11 +87,14 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
     def approve_pastor(self, request, pk=None):
         """Pastor approves and stamps."""
         mr = self.get_object()
+        if not mr.elder_signed:
+            return Response({'error': 'Elder must sign first.'}, status=status.HTTP_400_BAD_REQUEST)
         if mr.pastor_approved:
             return Response({'error': 'Already approved by Pastor.'}, status=status.HTTP_400_BAD_REQUEST)
         
         mr.pastor_approved = True
         mr.pastor = request.user
+        mr.status = 'approved'
         mr.save()
         
         # Create a record in Signature for the stamp
@@ -100,8 +105,16 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             signature_image=request.user.stamp_image or request.user.signature_image
         )
         
+        # Generate the PDF at the FINAL stage
+        from .pdf_generator import generate_ministry_request_pdf
+        pdf_path = generate_ministry_request_pdf(mr)
+        if pdf_path:
+            from django.core.files.base import ContentFile
+            with open(pdf_path, 'rb') as f:
+                mr.final_pdf.save(f'final_{mr.id}.pdf', ContentFile(f.read()), save=True)
+
         _log(request.user, "Approved by Pastor", mr)
-        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} approved by Pastor. Now awaiting Elder signature.")
+        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} fully signed and finalized.")
         
         return Response({'status': 'Approved by Pastor.'})
 
@@ -109,14 +122,11 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
     def sign_elder(self, request, pk=None):
         """Elder signs."""
         mr = self.get_object()
-        if not mr.pastor_approved:
-            return Response({'error': 'Pastor must approve first.'}, status=status.HTTP_400_BAD_REQUEST)
         if mr.elder_signed:
             return Response({'error': 'Already signed by Elder.'}, status=status.HTTP_400_BAD_REQUEST)
         
         mr.elder_signed = True
         mr.elder = request.user
-        mr.status = 'approved'
         mr.save()
         
         # Create signature record
@@ -127,18 +137,10 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             signature_image=request.user.signature_image
         )
         
-        # Generate the PDF
-        from .pdf_generator import generate_ministry_request_pdf
-        pdf_path = generate_ministry_request_pdf(mr)
-        if pdf_path:
-            from django.core.files.base import ContentFile
-            with open(pdf_path, 'rb') as f:
-                mr.final_pdf.save(f'final_{mr.id}.pdf', ContentFile(f.read()), save=True)
-
         _log(request.user, "Signed by Elder", mr)
-        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} fully signed and finalized.")
+        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} signed by Elder. Now awaiting Pastor approval.")
         
-        return Response({'status': 'Signed and Finalized by Elder.'})
+        return Response({'status': 'Signed by Elder.'})
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
