@@ -67,6 +67,8 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if not user.is_authenticated:
+            return self.queryset
         if user.role == 'clerk':
             return self.queryset.filter(clerk=user)
         # Elders and Pastors need to see the full list for processing and history
@@ -170,12 +172,20 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             if not v_uuid or str(v_uuid) != str(mr.verification_uuid):
                 return Response({'error': 'Authentication required or invalid verification ID.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not mr.final_pdf:
-            return Response({'error': 'PDF not generated yet. Approvals or Rejection might be incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        from django.http import FileResponse
-        prefix = "Approval" if mr.status == 'approved' else "Rejection"
-        return FileResponse(mr.final_pdf, as_attachment=True, filename=f"{prefix}_Request_{mr.id}.pdf")
+        try:
+            if not mr.final_pdf:
+                return Response({'error': 'PDF not generated yet. Approvals or Rejection might be incomplete.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            from django.http import FileResponse
+            prefix = "Approval" if mr.status == 'approved' else "Rejection"
+            # Ensure the file actually exists on disk
+            if not os.path.exists(mr.final_pdf.path):
+                return Response({'error': 'PDF file missing on server.'}, status=status.HTTP_404_NOT_FOUND)
+                
+            return FileResponse(mr.final_pdf, as_attachment=True, filename=f"{prefix}_Request_{mr.id}.pdf")
+        except Exception as e:
+            import traceback
+            return Response({'error': f'Download failed: {str(e)}', 'details': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'], permission_classes=[IsElderOrPastor])
     def reject(self, request, pk=None):
