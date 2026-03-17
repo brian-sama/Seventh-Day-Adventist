@@ -294,22 +294,22 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             
             # Lock the document
             lock_pdf(target_path, target_path)
-                
-                # Update final_document field in ServiceRequest
-                from django.core.files.base import ContentFile
-                with open(target_path, 'rb') as f:
-                    sr.final_document.save(f'final_{sr.id}.pdf', ContentFile(f.read()), save=False)
+            
+            # Update final_document field in ServiceRequest
+            from django.core.files.base import ContentFile
+            with open(target_path, 'rb') as f:
+                sr.final_document.save(f'final_{sr.id}.pdf', ContentFile(f.read()), save=False)
 
-                Signature.objects.get_or_create(
-                    document=sr.document,
-                    role='pastor',
-                    defaults={
-                        'signed_by': request.user,
-                        'x_position': 130,
-                        'y_position': 60,
-                        'ip_address': request.META.get('REMOTE_ADDR'),
-                    }
-                )
+            Signature.objects.get_or_create(
+                document=sr.document,
+                role='pastor',
+                defaults={
+                    'signed_by': request.user,
+                    'x_position': 130,
+                    'y_position': 60,
+                    'ip_address': request.META.get('REMOTE_ADDR'),
+                }
+            )
 
             sr.status = 'approved'
             sr.current_stage = 'FINALIZED'
