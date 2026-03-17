@@ -96,16 +96,40 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
-        """Serve the document file for download. Blocked if not finalized."""
+        """Serve the document file for download. Preview aware."""
         from django.http import FileResponse, HttpResponseForbidden
         doc = self.get_object()
         
+        # Check if requested as inline (preview) or attachment (download)
+        as_inline = request.query_params.get('inline') == '1'
+        
         # Check if the document belongs to a finalized request
         sr = ServiceRequest.objects.filter(document=doc).first()
-        if sr and sr.current_stage != 'FINALIZED' and request.user.role not in ['admin', 'clerk']:
+        
+        # Security: Only permit attachment download AFTER final approval (unless clerk/admin)
+        if not as_inline and sr and sr.current_stage != 'FINALIZED' and request.user.role not in ['admin', 'clerk']:
             return HttpResponseForbidden("Download is only permitted after final Pastor approval.")
+        
+        # If it's a DOCX and we want an inline preview, serve the converted PDF if available
+        file_to_serve = doc.file
+        if as_inline and doc.file.name.endswith(('.docx', '.doc')):
+            if not doc.converted_pdf:
+                # Try to convert on the fly if not already converted
+                from .pdf_service import convert_docx_to_pdf
+                pdf_filename = os.path.splitext(doc.file.name)[0] + ".pdf"
+                pdf_path = os.path.join(os.path.dirname(doc.file.path), pdf_filename)
+                
+                converted_path = convert_docx_to_pdf(doc.file.path, pdf_path)
+                if converted_path:
+                    # Save the relative path to models
+                    rel_path = os.path.relpath(converted_path, start=os.path.join(os.getcwd(), 'media'))
+                    doc.converted_pdf = rel_path
+                    doc.save()
             
-        return FileResponse(doc.file, as_attachment=True, filename=doc.file.name.split('/')[-1])
+            if doc.converted_pdf:
+                file_to_serve = doc.converted_pdf
+            
+        return FileResponse(file_to_serve, as_attachment=not as_inline, filename=os.path.basename(file_to_serve.name))
 
 
 class ServiceRequestViewSet(viewsets.ModelViewSet):

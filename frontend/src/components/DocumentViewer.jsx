@@ -50,7 +50,8 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
     const loadPreview = async () => {
         const token = localStorage.getItem('accessToken');
         try {
-            const response = await fetch(`/api/documents/${request.document.id}/download/`, {
+            // Using inline=1 to tell backend we want a preview, not a download attachment
+            const response = await fetch(`/api/documents/${request.document.id}/download/?inline=1`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('Preview failed');
