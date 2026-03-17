@@ -13,6 +13,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunSQL("DELETE FROM api_notification;"),
+        migrations.RunSQL("DELETE FROM api_comment;"),
+        migrations.RunSQL("DELETE FROM api_signature;"),
+        migrations.RunSQL("DELETE FROM api_useractivity;"),
         migrations.RemoveField(
             model_name='document',
             name='uploaded_by',
