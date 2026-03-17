@@ -17,6 +17,21 @@
   --text-secondary: #64748b;
   --border-color: rgba(226, 232, 240, 0.8);
   --glass-bg: rgba(255, 255, 255, 0.7);
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border-color: rgba(51, 65, 85, 0.5);
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --input-bg: rgba(15, 23, 42, 0.5);
+    --input-border: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .dark {
@@ -26,6 +41,8 @@
   --text-secondary: #94a3b8;
   --border-color: rgba(51, 65, 85, 0.5);
   --glass-bg: rgba(15, 23, 42, 0.7);
+  --input-bg: rgba(15, 23, 42, 0.5);
+  --input-border: rgba(255, 255, 255, 0.1);
 }
 
 body {

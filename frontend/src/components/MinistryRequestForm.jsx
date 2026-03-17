@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-hot-toast';
 import './MinistryRequestForm.css';
+import { fetchApi } from '../utils/api';
 
 const MinistryRequestForm = ({ onComplete }) => {
   const [formData, setFormData] = useState({
@@ -29,24 +29,14 @@ const MinistryRequestForm = ({ onComplete }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/ministry-requests/', {
+      await fetchApi('/api/ministry-requests/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${localStorage.getItem('token')}`
-        },
         body: JSON.stringify(formData)
       });
-
-      if (response.ok) {
-        toast.success('Ministry Request submitted successfully!');
-        if (onComplete) onComplete();
-      } else {
-        const err = await response.json();
-        toast.error(err.detail || 'Failed to submit request');
-      }
+      
+      if (onComplete) onComplete();
     } catch (error) {
-      toast.error('Network error. Please try again.');
+      // Errors are handled and toasted in fetchApi
     } finally {
       setLoading(false);
     }
