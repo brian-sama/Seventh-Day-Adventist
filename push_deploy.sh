@@ -8,9 +8,9 @@
 # ==============================================================================
 
 # Default Configuration (Adjust these to your setup)
-VPS_USER="root"
+VPS_USER="brian"
 VPS_IP="89.116.26.24"
-# REMOTE_PROJECT_PATH="/root/Seventh-Day-Adventist"
+REMOTE_PROJECT_PATH="/home/brian/Seventh-Day-Adventist"
 
 # Check if arguments are provided, otherwise use defaults/prompt
 IP=${1:-$VPS_IP}
