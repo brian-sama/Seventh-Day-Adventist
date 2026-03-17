@@ -26,11 +26,6 @@ class Migration(migrations.Migration):
             name='stamp_image',
             field=models.ImageField(blank=True, null=True, upload_to='stamps/'),
         ),
-        migrations.AlterField(
-            model_name='user',
-            name='email',
-            field=models.EmailField(max_length=254, unique=True),
-        ),
         migrations.CreateModel(
             name='MinistryRequest',
             fields=[
