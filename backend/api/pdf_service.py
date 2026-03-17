@@ -21,7 +21,9 @@ def convert_docx_to_pdf(docx_path, pdf_path):
             convert(docx_path, pdf_path)
             return pdf_path
         except Exception as e:
-            print(f"Windows DOCX to PDF conversion failed: {e}")
+            import traceback
+            print(f"Windows DOCX to PDF conversion failed: {str(e)}")
+            traceback.print_exc()
             return None
     else:
         # Linux / Production (Contabo VPS)
@@ -42,7 +44,14 @@ def convert_docx_to_pdf(docx_path, pdf_path):
                 
             return pdf_path
         except Exception as e:
-            print(f"Linux DOCX to PDF conversion failed: {e}")
+            import traceback
+            print(f"Linux DOCX to PDF conversion failed: {str(e)}")
+            traceback.print_exc()
+            # If it failed, check if libreoffice exists
+            try:
+                subprocess.run(['libreoffice', '--version'], check=True, capture_output=True)
+            except Exception:
+                print("CRITICAL: 'libreoffice' command not found. Please install libreoffice-common on the VPS.")
             return None
 
 def apply_clerk_stamp(input_pdf_path, output_pdf_path):
@@ -165,8 +174,19 @@ def add_signature_to_pdf(input_pdf_path, signature_image_path, output_pdf_path, 
     """
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=letter)
-    if os.path.exists(signature_image_path):
+    if signature_image_path and os.path.exists(signature_image_path):
         c.drawImage(signature_image_path, x, y, width=width, height=height, mask='auto')
+    else:
+        # Placeholder signature text
+        c.setStrokeColor(colors.gray)
+        c.setLineWidth(0.5)
+        c.setDash(2, 2)
+        c.rect(x, y, width, height)
+        c.setFillColor(colors.red)
+        c.setFont("Helvetica-BoldOblique", 8)
+        c.drawCentredString(x + (width/2), y + (height/2) - 4, "DIGITALLY SIGNED")
+        c.setFont("Helvetica", 6)
+        c.drawCentredString(x + (width/2), y + 6, "- Placeholder -")
     c.save()
     packet.seek(0)
     

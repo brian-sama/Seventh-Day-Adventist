@@ -129,7 +129,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
             if doc.converted_pdf:
                 file_to_serve = doc.converted_pdf
             
-        return FileResponse(file_to_serve, as_attachment=not as_inline, filename=os.path.basename(file_to_serve.name))
+        content_type = 'application/pdf' if file_to_serve.name.endswith('.pdf') else None
+        return FileResponse(file_to_serve, as_attachment=not as_inline, filename=os.path.basename(file_to_serve.name), content_type=content_type)
 
 
 class ServiceRequestViewSet(viewsets.ModelViewSet):
@@ -222,30 +223,30 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
 
         # Embed elder signature into PDF
         try:
-            if request.user.signature_image:
-                target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
-                
-                if not target_path.lower().endswith('.pdf'):
-                    return Response({'error': 'Cannot sign: File is not a PDF.'},
-                                    status=status.HTTP_400_BAD_REQUEST)
+            target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
+            
+            if not target_path.lower().endswith('.pdf'):
+                return Response({'error': 'Cannot sign: File is not a PDF.'},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-                add_signature_to_pdf(
-                    target_path,
-                    request.user.signature_image.path,
-                    target_path,
-                    x=150, y=170, # Precise Head Elder Sign line anchor
-                    width=100, height=35
-                )
-                Signature.objects.get_or_create(
-                    document=sr.document,
-                    role='elder',
-                    defaults={
-                        'signed_by': request.user,
-                        'x_position': 100,
-                        'y_position': 100,
-                        'ip_address': request.META.get('REMOTE_ADDR'),
-                    }
-                )
+            sig_path = request.user.signature_image.path if request.user.signature_image else None
+            add_signature_to_pdf(
+                target_path,
+                sig_path,
+                target_path,
+                x=150, y=170, # Precise Head Elder Sign line anchor
+                width=100, height=35
+            )
+            Signature.objects.get_or_create(
+                document=sr.document,
+                role='elder',
+                defaults={
+                    'signed_by': request.user,
+                    'x_position': 100,
+                    'y_position': 100,
+                    'ip_address': request.META.get('REMOTE_ADDR'),
+                }
+            )
 
             sr.status = 'pending_pastor'
             sr.current_stage = 'PASTOR_PENDING'
@@ -274,25 +275,25 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
 
         try:
             # Embed pastor signature, add QR verification, and finalize
-            if request.user.signature_image:
-                from .pdf_service import add_signature_to_pdf, add_qr_verification, lock_pdf
-                target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
-                
-                # Apply Pastor Signature
-                add_signature_to_pdf(
-                    target_path,
-                    request.user.signature_image.path,
-                    target_path,
-                    x=150, y=90, # Precise Pastor Sign line anchor (lower on page)
-                    width=100, height=35
-                )
-                
-                # Apply QR Verification (matching church domain)
-                verify_url = f"https://magwegwewestsda.co.zw/verify/{sr.verification_uuid}/"
-                add_qr_verification(target_path, target_path, verify_url)
-                
-                # Lock the document
-                lock_pdf(target_path, target_path)
+            from .pdf_service import add_signature_to_pdf, add_qr_verification, lock_pdf
+            target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
+            
+            # Apply Pastor Signature (Image or Placeholder)
+            sig_path = request.user.signature_image.path if request.user.signature_image else None
+            add_signature_to_pdf(
+                target_path,
+                sig_path,
+                target_path,
+                x=150, y=90, # Precise Pastor Sign line anchor (lower on page)
+                width=100, height=35
+            )
+            
+            # Apply QR Verification (matching church domain)
+            verify_url = f"https://magwegwewestsda.co.zw/verify/{sr.verification_uuid}/"
+            add_qr_verification(target_path, target_path, verify_url)
+            
+            # Lock the document
+            lock_pdf(target_path, target_path)
                 
                 # Update final_document field in ServiceRequest
                 from django.core.files.base import ContentFile

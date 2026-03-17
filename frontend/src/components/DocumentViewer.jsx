@@ -56,10 +56,20 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
             });
             if (!response.ok) throw new Error('Preview failed');
             const blob = await response.blob();
+            
+            // Check if it's actually a PDF. If conversion fails, backend returns the original (e.g. DOCX)
+            if (blob.type !== 'application/pdf' && !request.document.file.toLowerCase().endsWith('.pdf')) {
+                console.warn('Backend returned non-PDF blob for preview:', blob.type);
+                // Fallback: We can't show Word/other types in iframe safely
+                setPreviewUrl('ERROR_TYPE');
+                return;
+            }
+
             const url = URL.createObjectURL(blob);
             setPreviewUrl(url);
         } catch (err) {
             console.error('Failed to load preview', err);
+            setPreviewUrl('ERROR_LOAD');
         }
     };
 
@@ -142,7 +152,24 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                     {/* 2. CENTER PANEL (70%: Document Preview) */}
                     <main className="flex-1 bg-slate-200/50 flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden">
                         <div className="w-full h-full max-w-4xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative group">
-                            {previewUrl ? (
+                            {previewUrl === 'ERROR_TYPE' || previewUrl === 'ERROR_LOAD' ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-12 text-center bg-slate-50">
+                                    <div className="p-6 bg-amber-50 rounded-full mb-6">
+                                        <FileText className="w-12 h-12 text-amber-600" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-slate-900 mb-2">Preview Unavailable</h3>
+                                    <p className="text-sm text-slate-500 max-w-md mb-8 leading-relaxed">
+                                        We couldn't generate a preview for this document. It might be a Word file that failed to convert or a format we can't display yet.
+                                    </p>
+                                    <button 
+                                        onClick={() => downloadFile(`/api/documents/${request.document.id}/download/`, `${request.document_title}.pdf`)}
+                                        className="flex items-center gap-3 px-8 py-4 bg-[#1e3a8a] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Download for Manual Review
+                                    </button>
+                                </div>
+                            ) : previewUrl ? (
                                 <iframe 
                                     src={previewUrl}
                                     className="w-full h-full border-0"
@@ -151,13 +178,13 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-slate-400">
                                     <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
-                                    <p className="text-sm font-bold uppercase tracking-widest">Loading Preview...</p>
+                                    <p className="text-sm font-bold uppercase tracking-widest">Generating Preview...</p>
                                 </div>
                             )}
                             {/* Overlay Controls */}
                             <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
-                                    onClick={() => previewUrl && window.open(previewUrl, '_blank')}
+                                    onClick={() => previewUrl && previewUrl.startsWith('blob:') && window.open(previewUrl, '_blank')}
                                     className="p-2 bg-white/90 backdrop-blur shadow-md rounded-xl hover:bg-white text-slate-600"
                                 >
                                     <Maximize2 className="w-4 h-4" />
