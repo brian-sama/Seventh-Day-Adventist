@@ -122,7 +122,7 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                     <main className="flex-1 bg-slate-200/50 flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden">
                         <div className="w-full h-full max-w-4xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden relative group">
                             <iframe 
-                                src={`/api/documents/${request.document_id}/download/`}
+                                src={`/api/documents/${request.document.id}/download/`}
                                 className="w-full h-full border-0"
                                 title="Document Preview"
                             />
@@ -133,7 +133,7 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                                 </button>
                                 {isFinalized && (
                                     <button 
-                                        onClick={() => downloadFile(`/api/documents/${request.document_id}/download/`, `${request.document_title}.pdf`)}
+                                        onClick={() => downloadFile(`/api/documents/${request.document.id}/download/`, `${request.document_title}.pdf`)}
                                         className="p-2 bg-[#1e3a8a] text-white shadow-md rounded-xl hover:bg-blue-700"
                                     >
                                         <Download className="w-4 h-4" />

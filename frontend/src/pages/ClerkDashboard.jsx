@@ -268,6 +268,12 @@ const ClerkDashboard = () => {
       )}
 
       {/* Tracker Modal */}
+      {trackingRequest && (
+        <DocumentTracker 
+          request={trackingRequest} 
+          onClose={() => setTrackingRequest(null)} 
+        />
+      )}
 
       {/* Upload Modal */}
       {isMenuOpen && (

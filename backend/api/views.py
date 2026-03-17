@@ -158,6 +158,11 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             # Apply the NEW precise stamp (bottom-right 120x60)
             doc = sr.document
             target_path = doc.converted_pdf.path if doc.converted_pdf else doc.file.path
+            
+            if not target_path.lower().endswith('.pdf'):
+                return Response({'error': 'Cannot stamp: File is not a PDF.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
             apply_clerk_stamp(target_path, target_path)
             
             sr.is_stamped = True
@@ -195,6 +200,11 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
         try:
             if request.user.signature_image:
                 target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
+                
+                if not target_path.lower().endswith('.pdf'):
+                    return Response({'error': 'Cannot sign: File is not a PDF.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
                 add_signature_to_pdf(
                     target_path,
                     request.user.signature_image.path,

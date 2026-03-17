@@ -100,8 +100,14 @@ def apply_clerk_stamp(input_pdf_path, output_pdf_path):
             page.merge_page(stamp_page)
         output.add_page(page)
 
-    with open(output_pdf_path, "wb") as f:
+    # Safe write: Use a temporary file then rename
+    temp_path = output_pdf_path + ".tmp"
+    with open(temp_path, "wb") as f:
         output.write(f)
+    
+    if os.path.exists(output_pdf_path):
+        os.remove(output_pdf_path)
+    os.rename(temp_path, output_pdf_path)
 
     return output_pdf_path
 
@@ -142,8 +148,14 @@ def add_qr_verification(input_pdf_path, output_pdf_path, verify_url):
             page.merge_page(qr_pdf.pages[0])
         output.add_page(page)
 
-    with open(output_pdf_path, "wb") as f:
+    # Safe write: Use a temporary file then rename
+    temp_path = output_pdf_path + ".tmp"
+    with open(temp_path, "wb") as f:
         output.write(f)
+    
+    if os.path.exists(output_pdf_path):
+        os.remove(output_pdf_path)
+    os.rename(temp_path, output_pdf_path)
 
     return output_pdf_path
 
@@ -167,8 +179,14 @@ def add_signature_to_pdf(input_pdf_path, signature_image_path, output_pdf_path, 
             page.merge_page(new_pdf.pages[0])
         output.add_page(page)
 
-    with open(output_pdf_path, "wb") as f:
+    # Safe write: Use a temporary file then rename
+    temp_path = output_pdf_path + ".tmp"
+    with open(temp_path, "wb") as f:
         output.write(f)
+    
+    if os.path.exists(output_pdf_path):
+        os.remove(output_pdf_path)
+    os.rename(temp_path, output_pdf_path)
 
     return output_pdf_path
 
@@ -182,6 +200,14 @@ def lock_pdf(input_path, output_path):
         writer.add_page(page)
     # Password-free read, but locked for edit
     writer.encrypt("", "SDA_SECURE_777", use_128bit=True)
-    with open(output_path, "wb") as f:
+    
+    # Safe write: Use a temporary file then rename
+    temp_path = output_path + ".tmp"
+    with open(temp_path, "wb") as f:
         writer.write(f)
+    
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    os.rename(temp_path, output_path)
+
     return output_path
