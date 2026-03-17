@@ -17,9 +17,13 @@ def convert_docx_to_pdf(docx_path, pdf_path):
     """
     if platform.system() == "Windows":
         try:
+            # We only import docx2pdf on Windows as it requires MS Word
             from docx2pdf import convert
             convert(docx_path, pdf_path)
             return pdf_path
+        except ImportError:
+             print("WARNING: 'docx2pdf' not installed. Conversion skipped on Windows.")
+             return None
         except Exception as e:
             import traceback
             print(f"Windows DOCX to PDF conversion failed: {str(e)}")
@@ -29,13 +33,13 @@ def convert_docx_to_pdf(docx_path, pdf_path):
         # Linux / Production (Contabo VPS)
         try:
             # LibreOffice command for headless conversion
-            # output_dir is derived from pdf_path
             output_dir = os.path.dirname(pdf_path)
             user_profile = "/tmp/libreoffice_pdf_conversion"
             if not os.path.exists(user_profile):
                 os.makedirs(user_profile, exist_ok=True)
 
-            subprocess.run([
+            # Use subprocess.run with capture_output to log errors if it fails
+            result = subprocess.run([
                 'libreoffice',
                 f'-env:UserInstallation=file://{user_profile}',
                 '--headless', '--convert-to', 'pdf',
@@ -52,15 +56,15 @@ def convert_docx_to_pdf(docx_path, pdf_path):
                 os.rename(generated_pdf, pdf_path)
                 
             return pdf_path
+        except subprocess.CalledProcessError as e:
+            print(f"LibreOffice conversion failed (Exit {e.returncode})")
+            print(f"STDOUT: {e.stdout.decode() if e.stdout else 'None'}")
+            print(f"STDERR: {e.stderr.decode() if e.stderr else 'None'}")
+            return None
         except Exception as e:
             import traceback
             print(f"Linux DOCX to PDF conversion failed: {str(e)}")
             traceback.print_exc()
-            # If it failed, check if libreoffice exists
-            try:
-                subprocess.run(['libreoffice', '--version'], check=True, capture_output=True)
-            except Exception:
-                print("CRITICAL: 'libreoffice' command not found. Please install libreoffice-common on the VPS.")
             return None
 
 def apply_clerk_stamp(input_pdf_path, output_pdf_path):

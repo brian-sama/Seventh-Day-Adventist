@@ -21,13 +21,15 @@ BACKEND_SERVICE="sda_backend"  # Updated to match your actual service name
 NGINX_SERVICE="nginx"
 # -----------------------------------------------------------
 
-echo ">>> Starting deployment at $(date)"
-echo ">>> Project Root: $PROJECT_ROOT"
-
-# 0. Infrastructure Setup (One-time)
+# 0. Infrastructure Setup (One-time or Repair)
 if ! command -v libreoffice &> /dev/null; then
-    echo ">>> LibreOffice not found. Installing for Word -> PDF conversion..."
-    sudo apt update && sudo apt install libreoffice -y
+    echo ">>> LibreOffice not found or broken. Installing headless version..."
+    sudo apt update
+    sudo apt --fix-broken install -y
+    sudo apt remove libreoffice* -y
+    sudo apt autoremove -y
+    sudo apt install libreoffice-core libreoffice-writer libreoffice-common --no-install-recommends -y
+    echo ">>> LibreOffice $(libreoffice --version) installed successfully."
 fi
 
 # 1. Update Codebase

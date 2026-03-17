@@ -11,4 +11,3 @@ reportlab
 Pillow
 gunicorn
 setproctitle
-docx2pdf
