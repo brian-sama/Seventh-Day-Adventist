@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes as perm_classes
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import MinistryRequest, Report, Signature, Comment, UserActivity, Notification
