@@ -192,6 +192,7 @@ const PastorDashboard = () => {
                     onClose={() => { setSelectedRequest(null); loadRequests(); }}
                     onActionSuccess={(type) => {
                         if (type === 'approve') handleAction(selectedRequest.id, 'approve_pastor');
+                        if (type === 'reject') setRejectingId(selectedRequest.id);
                     }}
                 />
             )}

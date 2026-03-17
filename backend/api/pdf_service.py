@@ -29,9 +29,15 @@ def convert_docx_to_pdf(docx_path, pdf_path):
             print(f"Windows DOCX to PDF conversion failed: {str(e)}")
             traceback.print_exc()
             return None
-    else:
         # Linux / Production (Contabo VPS)
         import tempfile
+        import shutil
+        
+        # Check if libreoffice is even installed
+        if not shutil.which('libreoffice'):
+            print("CRITICAL: 'libreoffice' command not found in PATH. Is it installed on the VPS?")
+            return None
+
         try:
             # LibreOffice command for headless conversion
             output_dir = os.path.dirname(pdf_path)
@@ -41,6 +47,11 @@ def convert_docx_to_pdf(docx_path, pdf_path):
             with tempfile.TemporaryDirectory(prefix="libreoffice_profile_") as user_profile:
                 print(f"DEBUG: Starting conversion for {docx_path} using profile {user_profile}")
                 
+                # Check if input file exists and is readable
+                if not os.path.exists(docx_path):
+                    print(f"CRITICAL: DOCX file not found at {docx_path}")
+                    return None
+
                 result = subprocess.run([
                     'libreoffice',
                     f'-env:UserInstallation=file://{user_profile}',
@@ -57,6 +68,10 @@ def convert_docx_to_pdf(docx_path, pdf_path):
                         os.remove(pdf_path)
                     os.rename(generated_pdf, pdf_path)
                     
+                if not os.path.exists(pdf_path):
+                    print(f"CRITICAL: LibreOffice conversion finished but {pdf_path} was not found.")
+                    return None
+
                 print(f"DEBUG: Conversion successful. PDF at {pdf_path}")
                 return pdf_path
         except subprocess.CalledProcessError as e:

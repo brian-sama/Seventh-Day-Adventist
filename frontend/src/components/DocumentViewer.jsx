@@ -7,6 +7,7 @@ import {
 import { fetchApi, downloadFile } from '../utils/api';
 import TruckButton from './TruckButton';
 import toast from 'react-hot-toast';
+import { AuthContext } from '../context/AuthContext';
 
 const STAGES = [
     { key: 'UPLOADED', label: 'Uploaded', icon: CheckCircle },
@@ -18,6 +19,7 @@ const STAGES = [
 ];
 
 const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
+    const { user } = React.useContext(AuthContext);
     const [activities, setActivities] = useState([]);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
@@ -163,7 +165,7 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                                     </div>
                                     <h3 className="text-xl font-black text-slate-900 mb-2">Preview Unavailable</h3>
                                     <p className="text-sm text-slate-500 max-w-md mb-8 leading-relaxed">
-                                        We couldn't generate a preview for this document. It might be a Word file that failed to convert or a format we can't display yet.
+                                        We couldn't generate a preview for this document.{request.document.file.toLowerCase().endsWith('.docx') ? ' DOCX-to-PDF conversion might be failing on the server.' : ' It might be a format we can\'t display yet.'}
                                     </p>
                                     <button 
                                         onClick={() => downloadFile(`/api/documents/${request.document.id}/download/`, `${request.document_title}.pdf`)}
@@ -235,19 +237,22 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
                                         <h4 className="text-xs font-black text-[#1e3a8a] uppercase tracking-[0.2em] mb-4">Required Attention</h4>
                                         <p className="text-sm text-[#1e3a8a]/70 font-medium mb-6 leading-relaxed">
                                             Currently held by <span className="font-bold underline">{request.current_holder}</span>. 
-                                            Action is required to progress this document to the <b>{STAGES[currentIdx + 1]?.label}</b> stage.
+                                            Action is required to progress this document <b>{STAGES[currentIdx + 1] ? `to the ${STAGES[currentIdx + 1].label} stage` : 'to Finalization'}</b>.
                                         </p>
                                         
                                         {/* Action Area (Prop-based buttons from parent) */}
                                         <div className="space-y-4">
                                             {request.can_approve && (
                                                 <TruckButton 
-                                                    text={request.role === 'clerk' ? "Apply Official Stamp" : "Sign & Forward"}
+                                                    label={user?.role === 'clerk' ? "Apply Official Stamp" : user?.role === 'pastor' ? "Final Sign & Approve" : "Sign & Forward"}
                                                     onClick={() => onActionSuccess('approve')}
                                                 />
                                             )}
                                             {request.can_reject && (
-                                                <button className="w-full py-4 text-xs font-black text-rose-600 bg-rose-50 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-colors uppercase tracking-widest">
+                                                <button 
+                                                    onClick={() => onActionSuccess('reject')}
+                                                    className="w-full py-4 text-xs font-black text-rose-600 bg-rose-50 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-colors uppercase tracking-widest"
+                                                >
                                                     Reject & Return to Clerk
                                                 </button>
                                             )}

@@ -176,6 +176,7 @@ const ElderDashboard = () => {
                     onClose={() => { setSelectedRequest(null); loadRequests(); }}
                     onActionSuccess={(type) => {
                         if (type === 'approve') handleAction(selectedRequest.id, 'approve_elder');
+                        if (type === 'reject') setRejectingId(selectedRequest.id);
                     }}
                 />
             )}

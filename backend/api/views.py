@@ -11,6 +11,13 @@ from .models import Document, ServiceRequest, Signature, Comment, UserActivity, 
 from .serializers import (UserSerializer, DocumentSerializer, ServiceRequestSerializer,
                           SignatureSerializer, CommentSerializer, UserActivitySerializer, NotificationSerializer)
 from .permissions import IsClerk, IsElder, IsPastor, IsElderOrPastor, IsClerkOrAdmin
+from .pdf_service import (
+    convert_docx_to_pdf, 
+    apply_clerk_stamp, 
+    add_signature_to_pdf, 
+    add_qr_verification, 
+    lock_pdf
+)
 
 User = get_user_model()
 
@@ -106,8 +113,16 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # Check if the document belongs to a finalized request
         sr = ServiceRequest.objects.filter(document=doc).first()
         
-        # Security: Only permit attachment download AFTER final approval (unless clerk/admin)
-        if not as_inline and sr and sr.current_stage != 'FINALIZED' and request.user.role not in ['admin', 'clerk']:
+        # Security: Only permit attachment download AFTER final approval (unless clerk/admin/involved elder/pastor)
+        is_involved = False
+        if sr:
+            is_involved = (request.user == sr.clerk or 
+                           (sr.elder and request.user == sr.elder) or 
+                           (sr.pastor and request.user == sr.pastor))
+            
+        is_staff = request.user.role in ['admin', 'clerk', 'elder', 'pastor']
+        
+        if not as_inline and sr and sr.current_stage != 'FINALIZED' and not is_staff and not is_involved:
             return HttpResponseForbidden("Download is only permitted after final Pastor approval.")
         
         # If it's a DOCX and we want an inline preview, serve the converted PDF if available
@@ -189,7 +204,6 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
             return Response({'error': 'This document has already been stamped.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        from .pdf_service import apply_clerk_stamp
         try:
             # Apply the NEW precise stamp (bottom-right 120x60)
             doc = sr.document
@@ -283,14 +297,13 @@ class ServiceRequestViewSet(viewsets.ModelViewSet):
         if sr.current_stage != 'PASTOR_PENDING':
             return Response({'error': f'Cannot sign: document is currently "{sr.current_stage}".'},
                             status=status.HTTP_400_BAD_REQUEST)
-
         try:
             # Embed pastor signature, add QR verification, and finalize
-            from .pdf_service import add_signature_to_pdf, add_qr_verification, lock_pdf
             target_path = sr.document.converted_pdf.path if sr.document.converted_pdf else sr.document.file.path
             
             # Apply Pastor Signature (Image or Placeholder)
             sig_path = request.user.signature_image.path if request.user.signature_image else None
+
             add_signature_to_pdf(
                 target_path,
                 sig_path,
