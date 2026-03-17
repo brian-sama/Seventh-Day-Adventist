@@ -36,10 +36,13 @@ def convert_docx_to_pdf(docx_path, pdf_path):
                 '--outdir', output_dir, docx_path
             ], check=True, capture_output=True)
             
-            # LibreOffice names the file based on the input name
-            # We move it to the requested pdf_path if they differ
-            generated_pdf = os.path.join(output_dir, os.path.basename(docx_path).replace('.docx', '.pdf'))
+            # LibreOffice names the file based on the input name (changes extension to .pdf)
+            name_without_ext = os.path.splitext(os.path.basename(docx_path))[0]
+            generated_pdf = os.path.join(output_dir, name_without_ext + ".pdf")
+            
             if generated_pdf != pdf_path and os.path.exists(generated_pdf):
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
                 os.rename(generated_pdf, pdf_path)
                 
             return pdf_path

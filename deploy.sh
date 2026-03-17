@@ -24,6 +24,12 @@ NGINX_SERVICE="nginx"
 echo ">>> Starting deployment at $(date)"
 echo ">>> Project Root: $PROJECT_ROOT"
 
+# 0. Infrastructure Setup (One-time)
+if ! command -v libreoffice &> /dev/null; then
+    echo ">>> LibreOffice not found. Installing for Word -> PDF conversion..."
+    sudo apt update && sudo apt install libreoffice -y
+fi
+
 # 1. Update Codebase
 echo ">>> Pulling latest changes from Git..."
 cd $PROJECT_ROOT
