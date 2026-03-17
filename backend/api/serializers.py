@@ -39,6 +39,7 @@ class MinistryRequestSerializer(serializers.ModelSerializer):
     signatures = serializers.SerializerMethodField()
     can_approve = serializers.SerializerMethodField()
     can_sign = serializers.SerializerMethodField()
+    can_finalize = serializers.SerializerMethodField()
 
     class Meta:
         model = MinistryRequest
@@ -48,7 +49,7 @@ class MinistryRequestSerializer(serializers.ModelSerializer):
             'elder_name', 'elder_contact', 'clerk_name', 'clerk_contact',
             'pastor', 'pastor_name', 'elder', 'elder_name', 'pastor_approved', 'elder_signed',
             'status', 'rejection_reason', 'verification_uuid', 'final_pdf',
-            'signatures', 'can_approve', 'can_sign', 'created_at', 'updated_at'
+            'signatures', 'can_approve', 'can_sign', 'can_finalize', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'clerk', 'pastor', 'elder', 'pastor_approved', 'elder_signed',
@@ -65,7 +66,11 @@ class MinistryRequestSerializer(serializers.ModelSerializer):
 
     def get_can_sign(self, obj):
         user = self.context['request'].user
-        return user.role == 'elder' and obj.pastor_approved and not obj.elder_signed
+        return user.role == 'elder' and not obj.elder_signed
+
+    def get_can_finalize(self, obj):
+        user = self.context['request'].user
+        return user.role == 'clerk' and obj.pastor_approved and not obj.final_pdf
 
 
 class SignatureSerializer(serializers.ModelSerializer):

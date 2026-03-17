@@ -33,8 +33,19 @@ const RequestDetailView = ({ requestId, onClose, userRole }) => {
   };
 
   const handleAction = async (actionType) => {
-    const endpoint = actionType === 'approve' ? 'approve_pastor' : 'sign_elder';
-    const confirmMsg = actionType === 'approve' ? 'Approve and apply stamp?' : 'Sign and finalize this request?';
+    let endpoint = '';
+    let confirmMsg = '';
+
+    if (actionType === 'approve') {
+      endpoint = 'approve_pastor';
+      confirmMsg = 'Approve this request?';
+    } else if (actionType === 'sign') {
+      endpoint = 'sign_elder';
+      confirmMsg = 'Sign this request?';
+    } else if (actionType === 'finalize') {
+      endpoint = 'finalize_clerk';
+      confirmMsg = 'Apply Pastor/Church stamp and generate final PDF?';
+    }
     
     if (!window.confirm(confirmMsg)) return;
     
@@ -196,7 +207,17 @@ const RequestDetailView = ({ requestId, onClose, userRole }) => {
             </button>
           )}
 
-          {request.elder_signed && (
+          {/* Clerk Action - Final Stage */}
+          {userRole === 'clerk' && request.can_finalize && (
+            <button 
+              onClick={() => handleAction('finalize')}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+            >
+              <Stamp size={20} /> Finalize & Stamp
+            </button>
+          )}
+
+          {request.final_pdf && (
             <a 
               href={`/api/ministry-requests/${request.id}/download/`}
               className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"

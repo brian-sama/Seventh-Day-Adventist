@@ -168,6 +168,7 @@ const ClerkDashboard = () => {
                               status={req.status} 
                               elder_signed={req.elder_signed} 
                               pastor_approved={req.pastor_approved} 
+                              final_pdf={req.final_pdf}
                             />
                           </td>
                           <td className="px-6 py-5 text-right">
@@ -248,12 +249,13 @@ const ClerkDashboard = () => {
   );
 };
 
-const StatusBadge = ({ status, approved, elder_signed, pastor_approved }) => {
+const StatusBadge = ({ status, approved, elder_signed, pastor_approved, final_pdf }) => {
   if (status === 'rejected') return <span className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><XCircle size={12} /> Rejected</span>;
   if (status === 'approved') return <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><CheckCircle size={12} /> Finalized</span>;
 
   if (!elder_signed) return <span className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><Clock size={12} /> Awaiting Elder</span>;
   if (!pastor_approved) return <span className="px-3 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><Clock size={12} /> Awaiting Pastor</span>;
+  if (!final_pdf) return <span className="px-3 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><Stamp size={12} /> Needs Final Stamp</span>;
   
   return <span className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-xs font-bold flex items-center gap-1 w-fit"><Clock size={12} /> Processing</span>;
 };

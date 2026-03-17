@@ -69,13 +69,7 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'clerk':
             return self.queryset.filter(clerk=user)
-        elif user.role == 'elder':
-            from django.db.models import Q
-            # Elders see pending requests that they haven't signed yet
-            return self.queryset.filter(status='pending', elder_signed=False)
-        elif user.role == 'pastor':
-            # Pastors see requests that have been signed by an elder
-            return self.queryset.filter(elder_signed=True, pastor_approved=False)
+        # Elders and Pastors need to see the full list for processing and history
         return self.queryset
 
     def perform_create(self, serializer):
@@ -85,7 +79,7 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsPastor])
     def approve_pastor(self, request, pk=None):
-        """Pastor approves and stamps."""
+        """Pastor approves. Stamp and PDF generation move to Clerk's final step."""
         mr = self.get_object()
         if not mr.elder_signed:
             return Response({'error': 'Elder must sign first.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -94,18 +88,37 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
         
         mr.pastor_approved = True
         mr.pastor = request.user
-        mr.status = 'approved'
         mr.save()
         
-        # Create a record in Signature for the stamp
-        Signature.objects.create(
-            request=mr,
-            signed_by=request.user,
-            role='pastor',
-            signature_image=request.user.stamp_image or request.user.signature_image
-        )
+        _log(request.user, "Approved by Pastor", mr)
+        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} approved by Pastor. Now needs Clerk final stamp.")
         
-        # Generate the PDF at the FINAL stage
+        return Response({'status': 'Approved by Pastor.'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsClerkOrAdmin])
+    def finalize_clerk(self, request, pk=None):
+        """Clerk applies final stamp and generates PDF."""
+        mr = self.get_object()
+        if not mr.pastor_approved:
+            return Response({'error': 'Pastor must approve first.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mr.final_pdf:
+            return Response({'error': 'Already finalized.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        mr.status = 'approved'
+        mr.save()
+
+        # Apply Pastor's stamp to the signature model if not already there
+        if mr.pastor and (mr.pastor.stamp_image or mr.pastor.signature_image):
+            Signature.objects.get_or_create(
+                request=mr,
+                role='pastor',
+                defaults={
+                    'signed_by': mr.pastor,
+                    'signature_image': mr.pastor.stamp_image or mr.pastor.signature_image
+                }
+            )
+
+        # Generate the PDF at this final step
         from .pdf_generator import generate_ministry_request_pdf
         pdf_path = generate_ministry_request_pdf(mr)
         if pdf_path:
@@ -113,10 +126,8 @@ class MinistryRequestViewSet(viewsets.ModelViewSet):
             with open(pdf_path, 'rb') as f:
                 mr.final_pdf.save(f'final_{mr.id}.pdf', ContentFile(f.read()), save=True)
 
-        _log(request.user, "Approved by Pastor", mr)
-        _notify(mr, mr.clerk, 'whatsapp', f"Request #{mr.id} fully signed and finalized.")
-        
-        return Response({'status': 'Approved by Pastor.'})
+        _log(request.user, "Finalized and Stamped by Clerk", mr)
+        return Response({'status': 'Finalized and Stamped.'})
 
     @action(detail=True, methods=['post'], permission_classes=[IsElder])
     def sign_elder(self, request, pk=None):
