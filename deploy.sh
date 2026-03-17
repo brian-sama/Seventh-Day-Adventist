@@ -15,6 +15,12 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$PROJECT_ROOT/env"
 
+# --- CONFIGURATION (Adjust these to match your VPS setup) ---
+# To find your service names, run: systemctl list-units --type=service | grep -E "gunicorn|sda|church"
+BACKEND_SERVICE="sda_backend"  # Updated to match your actual service name
+NGINX_SERVICE="nginx"
+# -----------------------------------------------------------
+
 echo ">>> Starting deployment at $(date)"
 echo ">>> Project Root: $PROJECT_ROOT"
 
@@ -42,11 +48,9 @@ npm install
 npm run build
 
 # 4. Restart Services
-# Note: Assuming your systemd services are named 'gunicorn' and 'nginx'.
-# Adjust these names if they differ on your server.
 echo ">>> Restarting services..."
-sudo systemctl restart gunicorn
-sudo systemctl restart nginx
+sudo systemctl restart $BACKEND_SERVICE
+sudo systemctl restart $NGINX_SERVICE
 
 echo ">>> Deployment completed successfully at $(date)!"
 echo "=============================================================================="
