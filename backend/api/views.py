@@ -131,7 +131,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 if doc.converted_pdf:
                     file_to_serve = doc.converted_pdf
                 else:
-                    return Response({'error': 'Document conversion to PDF failed. Please download for manual review.'}, 
+                    print(f"CRITICAL: DOCX conversion failed for document {doc.id} ({doc.file.name})")
+                    return Response({'error': 'Document conversion to PDF failed. Please ensure LibreOffice is installed and healthy on the VPS.'}, 
                                     status=status.HTTP_400_BAD_REQUEST)
             
             # Final safety check: if still not a PDF and requested inline, return error

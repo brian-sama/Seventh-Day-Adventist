@@ -31,8 +31,14 @@ def convert_docx_to_pdf(docx_path, pdf_path):
             # LibreOffice command for headless conversion
             # output_dir is derived from pdf_path
             output_dir = os.path.dirname(pdf_path)
+            user_profile = "/tmp/libreoffice_pdf_conversion"
+            if not os.path.exists(user_profile):
+                os.makedirs(user_profile, exist_ok=True)
+
             subprocess.run([
-                'libreoffice', '--headless', '--convert-to', 'pdf',
+                'libreoffice',
+                f'-env:UserInstallation=file://{user_profile}',
+                '--headless', '--convert-to', 'pdf',
                 '--outdir', output_dir, docx_path
             ], check=True, capture_output=True)
             
