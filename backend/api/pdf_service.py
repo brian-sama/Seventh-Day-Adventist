@@ -31,39 +31,42 @@ def convert_docx_to_pdf(docx_path, pdf_path):
             return None
     else:
         # Linux / Production (Contabo VPS)
+        import tempfile
         try:
             # LibreOffice command for headless conversion
             output_dir = os.path.dirname(pdf_path)
-            user_profile = "/tmp/libreoffice_pdf_conversion"
-            if not os.path.exists(user_profile):
-                os.makedirs(user_profile, exist_ok=True)
-
-            # Use subprocess.run with capture_output to log errors if it fails
-            result = subprocess.run([
-                'libreoffice',
-                f'-env:UserInstallation=file://{user_profile}',
-                '--headless', '--convert-to', 'pdf',
-                '--outdir', output_dir, docx_path
-            ], check=True, capture_output=True)
             
-            # LibreOffice names the file based on the input name (changes extension to .pdf)
-            name_without_ext = os.path.splitext(os.path.basename(docx_path))[0]
-            generated_pdf = os.path.join(output_dir, name_without_ext + ".pdf")
-            
-            if generated_pdf != pdf_path and os.path.exists(generated_pdf):
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
-                os.rename(generated_pdf, pdf_path)
+            # Using a truly unique, ephemeral user profile for every conversion
+            # ensures we avoid permission and locking issues on the VPS.
+            with tempfile.TemporaryDirectory(prefix="libreoffice_profile_") as user_profile:
+                print(f"DEBUG: Starting conversion for {docx_path} using profile {user_profile}")
                 
-            return pdf_path
+                result = subprocess.run([
+                    'libreoffice',
+                    f'-env:UserInstallation=file://{user_profile}',
+                    '--headless', '--convert-to', 'pdf',
+                    '--outdir', output_dir, docx_path
+                ], check=True, capture_output=True)
+                
+                # LibreOffice names the file based on the input name (changes extension to .pdf)
+                name_without_ext = os.path.splitext(os.path.basename(docx_path))[0]
+                generated_pdf = os.path.join(output_dir, name_without_ext + ".pdf")
+                
+                if generated_pdf != pdf_path and os.path.exists(generated_pdf):
+                    if os.path.exists(pdf_path):
+                        os.remove(pdf_path)
+                    os.rename(generated_pdf, pdf_path)
+                    
+                print(f"DEBUG: Conversion successful. PDF at {pdf_path}")
+                return pdf_path
         except subprocess.CalledProcessError as e:
-            print(f"LibreOffice conversion failed (Exit {e.returncode})")
+            print(f"CRITICAL: LibreOffice conversion failed (Exit {e.returncode})")
             print(f"STDOUT: {e.stdout.decode() if e.stdout else 'None'}")
             print(f"STDERR: {e.stderr.decode() if e.stderr else 'None'}")
             return None
         except Exception as e:
             import traceback
-            print(f"Linux DOCX to PDF conversion failed: {str(e)}")
+            print(f"CRITICAL: Linux DOCX to PDF conversion failed: {str(e)}")
             traceback.print_exc()
             return None
 

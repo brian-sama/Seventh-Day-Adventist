@@ -54,7 +54,11 @@ const DocumentViewer = ({ request, onClose, onActionSuccess }) => {
             const response = await fetch(`/api/documents/${request.document.id}/download/?inline=1`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('Preview failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Preview request failed:', errorData.error || response.statusText);
+                throw new Error('Preview failed');
+            }
             const blob = await response.blob();
             
             // Check if it's actually a PDF. If conversion fails, backend returns the original (e.g. DOCX)

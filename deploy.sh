@@ -22,14 +22,19 @@ NGINX_SERVICE="nginx"
 # -----------------------------------------------------------
 
 # 0. Infrastructure Setup (One-time or Repair)
-if ! command -v libreoffice &> /dev/null; then
-    echo ">>> LibreOffice not found or broken. Installing headless version..."
+# We check if it's installed AND functional (can run --version)
+if ! libreoffice --version &> /dev/null; then
+    echo ">>> LibreOffice is missing or broken. Attempting repair/reinstall..."
     sudo apt update
     sudo apt --fix-broken install -y
     sudo apt remove libreoffice* -y
     sudo apt autoremove -y
     sudo apt install libreoffice-core libreoffice-writer libreoffice-common --no-install-recommends -y
-    echo ">>> LibreOffice $(libreoffice --version) installed successfully."
+    if ! libreoffice --version &> /dev/null; then
+        echo ">>> WARNING: LibreOffice installation still problematic. You may need manual intervention."
+    else
+        echo ">>> LibreOffice $(libreoffice --version) is now functional."
+    fi
 fi
 
 # 1. Update Codebase
