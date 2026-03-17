@@ -15,83 +15,82 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='clerk')
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     signature_image = models.ImageField(upload_to='signatures/', blank=True, null=True)
+    stamp_image = models.ImageField(upload_to='stamps/', blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
 
-class Document(models.Model):
-    title = models.CharField(max_length=255)
-    file = models.FileField(upload_to='documents/')
-    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    locked = models.BooleanField(default=False)
-    document_hash = models.CharField(max_length=64, blank=True, null=True)
-    converted_pdf = models.FileField(upload_to='documents/converted/', blank=True, null=True)
-
-    def compute_hash(self):
-        """Compute and store a SHA256 hash of the document file."""
-        if self.file:
-            sha256 = hashlib.sha256()
-            self.file.seek(0)
-            for chunk in iter(lambda: self.file.read(8192), b''):
-                sha256.update(chunk)
-            self.file.seek(0)
-            return sha256.hexdigest()
-        return None
-
-
-class ServiceRequest(models.Model):
+class MinistryRequest(models.Model):
+    REQUEST_TYPE_CHOICES = (
+        ('preacher', 'Preacher Invitation'),
+        ('choir', 'Choir/Group Invitation'),
+    )
     STATUS_CHOICES = (
-        ('pending_elder', 'Pending Elder Review'),
-        ('pending_pastor', 'Pending Pastor Review'),
-        ('returned_to_clerk', 'Returned to Clerk'),
+        ('pending', 'Pending Approval'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
-        ('finalized', 'Finalized'),
     )
-    STAGE_CHOICES = (
-        ('UPLOADED', 'Uploaded'),
-        ('VERIFIED', 'Clerk Verified'),
-        ('ELDER_PENDING', 'Awaiting Elder'),
-        ('ELDER_SIGNED', 'Elder Signed'),
-        ('PASTOR_PENDING', 'Awaiting Pastor'),
-        ('FINALIZED', 'Finalized'),
-        ('SENT', 'Sent via WhatsApp'),
-    )
-    document = models.ForeignKey(Document, on_delete=models.CASCADE)
+    
     clerk = models.ForeignKey(User, related_name='requests_created', on_delete=models.CASCADE)
-    elder = models.ForeignKey(User, related_name='requests_reviewed', null=True, blank=True, on_delete=models.SET_NULL)
-    pastor = models.ForeignKey(User, related_name='requests_approved', null=True, blank=True, on_delete=models.SET_NULL)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending_elder')
-    current_stage = models.CharField(max_length=50, choices=STAGE_CHOICES, default='UPLOADED')
-    current_holder = models.CharField(max_length=100, default='Clerk')
-    is_stamped = models.BooleanField(default=False)
+    receiving_church = models.CharField(max_length=255)
+    receiving_location = models.CharField(max_length=255)
+
+    request_type = models.CharField(max_length=20, choices=REQUEST_TYPE_CHOICES)
+
+    invited_name = models.CharField(max_length=255)
+    invited_church = models.CharField(max_length=255)
+
+    event_type = models.CharField(max_length=255)
+    event_date = models.DateField()
+
+    elder_name = models.CharField(max_length=255)
+    elder_contact = models.CharField(max_length=50)
+
+    clerk_name = models.CharField(max_length=255)
+    clerk_contact = models.CharField(max_length=50)
+
+    pastor = models.ForeignKey(User, related_name='requests_pastor', null=True, blank=True, on_delete=models.SET_NULL)
+    elder = models.ForeignKey(User, related_name='requests_elder', null=True, blank=True, on_delete=models.SET_NULL)
+
+    pastor_approved = models.BooleanField(default=False)
+    elder_signed = models.BooleanField(default=False)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
     rejection_reason = models.TextField(blank=True, null=True)
     verification_uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    final_document = models.FileField(upload_to='documents/finalized/', blank=True, null=True)
+    final_pdf = models.FileField(upload_to='requests/finalized/', blank=True, null=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class Report(models.Model):
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='reports/')
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    quarter = models.CharField(max_length=10)
+    year = models.IntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.quarter} {self.year})"
+
+
 class Signature(models.Model):
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='signatures')
+    request = models.ForeignKey(MinistryRequest, on_delete=models.CASCADE, related_name='signatures')
     signed_by = models.ForeignKey(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, blank=True, null=True)
     signature_image = models.ImageField(upload_to='applied_signatures/', blank=True, null=True)
-    x_position = models.IntegerField(default=100)
-    y_position = models.IntegerField(default=100)
-    page_number = models.IntegerField(default=1)
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # Prevent duplicate signatures per role per document
-        unique_together = ('document', 'role')
+        unique_together = ('request', 'role')
 
 
 class Comment(models.Model):
-    request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='comments')
+    request = models.ForeignKey(MinistryRequest, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     text = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -100,7 +99,7 @@ class Comment(models.Model):
 class UserActivity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     action = models.CharField(max_length=255)
-    service_request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, null=True, blank=True)
+    ministry_request = models.ForeignKey(MinistryRequest, on_delete=models.CASCADE, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, default='success') # success, failure, pending
@@ -115,7 +114,7 @@ class Notification(models.Model):
         ('whatsapp', 'WhatsApp'),
         ('email', 'Email'),
     )
-    request = models.ForeignKey(ServiceRequest, on_delete=models.CASCADE, related_name='notifications')
+    request = models.ForeignKey(MinistryRequest, on_delete=models.CASCADE, related_name='notifications')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES)
     message = models.TextField()

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Document, ServiceRequest, Signature, Comment, UserActivity, Notification
+from .models import MinistryRequest, Report, Signature, Comment, UserActivity, Notification
 
 User = get_user_model()
 
@@ -11,8 +11,8 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name',
-                  'role', 'phone_number', 'signature_image']
-        read_only_fields = ['signature_image']
+                  'role', 'phone_number', 'signature_image', 'stamp_image']
+        read_only_fields = ['signature_image', 'stamp_image']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -23,63 +23,49 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class ReportSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source='uploaded_by.username', read_only=True)
-    signatures = serializers.SerializerMethodField()
 
     class Meta:
-        model = Document
-        fields = ['id', 'title', 'file', 'converted_pdf', 'uploaded_by', 'uploaded_by_name',
-                  'timestamp', 'locked', 'document_hash', 'signatures']
-        read_only_fields = ['uploaded_by', 'locked', 'document_hash', 'converted_pdf']
+        model = Report
+        fields = ['id', 'title', 'file', 'uploaded_by', 'uploaded_by_name', 'quarter', 'year', 'timestamp']
+        read_only_fields = ['uploaded_by', 'timestamp']
+
+
+class MinistryRequestSerializer(serializers.ModelSerializer):
+    clerk_name = serializers.CharField(source='clerk.username', read_only=True)
+    pastor_name = serializers.CharField(source='pastor.username', read_only=True)
+    elder_name = serializers.CharField(source='elder.username', read_only=True)
+    signatures = serializers.SerializerMethodField()
+    can_approve = serializers.SerializerMethodField()
+    can_sign = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MinistryRequest
+        fields = [
+            'id', 'clerk', 'clerk_name', 'receiving_church', 'receiving_location',
+            'request_type', 'invited_name', 'invited_church', 'event_type', 'event_date',
+            'elder_name', 'elder_contact', 'clerk_name', 'clerk_contact',
+            'pastor', 'pastor_name', 'elder', 'elder_name', 'pastor_approved', 'elder_signed',
+            'status', 'rejection_reason', 'verification_uuid', 'final_pdf',
+            'signatures', 'can_approve', 'can_sign', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'clerk', 'pastor', 'elder', 'pastor_approved', 'elder_signed',
+            'status', 'rejection_reason', 'verification_uuid', 'final_pdf'
+        ]
 
     def get_signatures(self, obj):
         sigs = obj.signatures.all().order_by('timestamp')
         return SignatureSerializer(sigs, many=True).data
 
-
-class ServiceRequestSerializer(serializers.ModelSerializer):
-    document = DocumentSerializer(read_only=True)
-    document_id = serializers.PrimaryKeyRelatedField(
-        queryset=Document.objects.all(), source='document', write_only=True
-    )
-    clerk_name = serializers.CharField(source='clerk.username', read_only=True)
-    elder_name = serializers.CharField(source='elder.username', read_only=True)
-    pastor_name = serializers.CharField(source='pastor.username', read_only=True)
-    document_title = serializers.CharField(source='document.title', read_only=True)
-    document_hash = serializers.CharField(source='document.document_hash', read_only=True)
-    can_approve = serializers.SerializerMethodField()
-    can_reject = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ServiceRequest
-        fields = [
-            'id', 'document', 'document_id', 'document_title', 'document_hash',
-            'clerk', 'clerk_name', 'elder', 'elder_name', 'pastor', 'pastor_name',
-            'status', 'current_stage', 'current_holder', 'is_stamped', 'rejection_reason',
-            'verification_uuid', 'final_document', 'can_approve', 'can_reject',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = [
-            'clerk', 'elder', 'pastor', 'status', 'current_stage', 
-            'current_holder', 'is_stamped', 'rejection_reason', 'verification_uuid', 'final_document'
-        ]
-
     def get_can_approve(self, obj):
         user = self.context['request'].user
-        if user.role == 'clerk' and obj.current_stage == 'UPLOADED':
-            return True
-        if user.role == 'elder' and obj.current_stage == 'ELDER_PENDING':
-            return True
-        if user.role == 'pastor' and obj.current_stage == 'PASTOR_PENDING':
-            return True
-        return False
+        return user.role == 'pastor' and obj.status == 'pending' and not obj.pastor_approved
 
-    def get_can_reject(self, obj):
+    def get_can_sign(self, obj):
         user = self.context['request'].user
-        if user.role in ['elder', 'pastor'] and obj.current_stage in ['ELDER_PENDING', 'PASTOR_PENDING']:
-            return True
-        return False
+        return user.role == 'elder' and obj.pastor_approved and not obj.elder_signed
 
 
 class SignatureSerializer(serializers.ModelSerializer):
@@ -87,10 +73,9 @@ class SignatureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Signature
-        fields = ['id', 'document', 'signed_by', 'signed_by_name', 'role',
-                  'signature_image', 'x_position', 'y_position', 'page_number',
-                  'ip_address', 'timestamp']
-        read_only_fields = ['signed_by', 'ip_address']
+        fields = ['id', 'request', 'signed_by', 'signed_by_name', 'role',
+                  'signature_image', 'timestamp']
+        read_only_fields = ['signed_by']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -109,8 +94,14 @@ class UserActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivity
         fields = ['id', 'user', 'username', 'user_role', 'action',
-                  'service_request', 'timestamp', 'details', 'status']
+                  'ministry_request', 'timestamp', 'details', 'status']
         read_only_fields = ['user']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = '__all__'
 
 
 class NotificationSerializer(serializers.ModelSerializer):

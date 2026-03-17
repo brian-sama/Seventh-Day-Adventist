@@ -7,7 +7,7 @@ import ElderDashboard from './pages/ElderDashboard'
 import PastorDashboard from './pages/PastorDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import Layout from './components/Layout'
-import VerifyDocument from './pages/VerifyDocument'
+import VerifyRequest from './pages/VerifyRequest'
 import { Toaster } from 'react-hot-toast'
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -75,7 +75,7 @@ function App() {
                 } />
             </Route>
 
-            <Route path="/verify/:uuid" element={<VerifyDocument />} />
+            <Route path="/verify/:uuid" element={<VerifyRequest />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     </Router>

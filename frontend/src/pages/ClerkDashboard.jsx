@@ -1,327 +1,249 @@
 import React, { useState, useEffect } from 'react';
-import { fetchApi, downloadFile } from '../utils/api';
-import { FileUp, FileText, CheckCircle, Clock, XCircle, RefreshCw, Stamp, Send, Archive, Eye, MapPin } from 'lucide-react';
+import { fetchApi } from '../utils/api';
+import { 
+  FilePlus, FileText, CheckCircle, Clock, XCircle, 
+  RefreshCw, Send, Archive, Eye, MapPin, UploadCloud,
+  ChevronRight, LayoutDashboard, FileBarChart
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import GooeyFooter from '../components/GooeyFooter';
-import TruckButton from '../components/TruckButton';
-import DocumentViewer from '../components/DocumentViewer';
-import DocumentTracker from '../components/DocumentTracker';
-
-const STATUS_BADGE = {
-  pending_elder:    { color: 'bg-amber-100 text-amber-800 border-amber-200',   icon: Clock,        label: 'Pending Elder' },
-  pending_pastor:   { color: 'bg-blue-100 text-blue-800 border-blue-200',      icon: Clock,        label: 'Pending Pastor' },
-  approved:         { color: 'bg-green-100 text-green-800 border-green-200',   icon: CheckCircle,  label: 'Approved' },
-  rejected:         { color: 'bg-red-100 text-red-800 border-red-200',         icon: XCircle,      label: 'Rejected' },
-  returned_to_clerk:{ color: 'bg-purple-100 text-purple-800 border-purple-200',icon: RefreshCw,    label: 'Returned' },
-  finalized:        { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: CheckCircle, label: 'Finalized' },
-};
-
-const StatusBadge = ({ status }) => {
-  const s = STATUS_BADGE[status] || STATUS_BADGE['pending_elder'];
-  const Icon = s.icon;
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${s.color}`}>
-      <Icon className="w-3 h-3 mr-1" />{s.label}
-    </span>
-  );
-};
-
-const TABS = [
-  { key: 'pending',   label: 'Pending Verification', icon: Clock },
-  { key: 'awaiting',  label: 'Awaiting Signatures',  icon: FileText },
-  { key: 'finalized', label: 'Finalized Documents',  icon: CheckCircle },
-  { key: 'all',       label: 'All Requests',         icon: Archive },
-];
+import MinistryRequestForm from '../components/MinistryRequestForm';
 
 const ClerkDashboard = () => {
+  const [activeModule, setActiveModule] = useState('requests'); // 'requests' or 'reports'
   const [requests, setRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState('pending');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [file, setFile] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stampingId, setStampingId] = useState(null);
-  const [trackingRequest, setTrackingRequest] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  useEffect(() => { loadRequests(); }, []);
+  useEffect(() => {
+    loadData();
+  }, [activeModule]);
 
-  const loadRequests = async () => {
-    try {
-      const data = await fetchApi('/api/requests/');
-      setRequests(data);
-    } catch (err) {
-      console.error('Failed to load requests:', err);
-    }
-  };
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file || !title) return;
+  const loadData = async () => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('file', file);
-      const docData = await fetchApi('/api/documents/', { method: 'POST', body: formData });
-      await fetchApi('/api/requests/', {
-        method: 'POST',
-        body: JSON.stringify({ document_id: docData.id }),
-      });
-      setIsMenuOpen(false);
-      setTitle('');
-      setFile(null);
-      loadRequests();
+      if (activeModule === 'requests') {
+        const data = await fetchApi('/api/ministry-requests/');
+        setRequests(data);
+      } else {
+        const data = await fetchApi('/api/reports/');
+        setReports(data);
+      }
     } catch (err) {
-      console.error('Upload failed', err);
-      alert('Upload failed. Check console.');
+      console.error('Failed to load data:', err);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApplyStamp = async (id) => {
-    setStampingId(id);
-    try {
-      await fetchApi(`/api/requests/${id}/apply_stamp/`, { method: 'POST' });
-      loadRequests();
-    } catch (err) {
-      alert('Failed to apply stamp. See console for details.');
-      console.error(err);
-    } finally {
-      setStampingId(null);
+  const handleReportUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endswith('.pdf')) {
+      toast.error('Only PDF files are allowed for reports');
+      return;
     }
-  };
 
-  const handleWhatsApp = async (id) => {
+    const title = prompt('Enter report title:');
+    if (!title) return;
+
+    const quarter = prompt('Enter quarter (e.g. Q1):');
+    const year = prompt('Enter year (e.g. 2024):');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title);
+    formData.append('quarter', quarter);
+    formData.append('year', year);
+
     try {
-      const data = await fetchApi(`/api/requests/${id}/whatsapp_link/`);
-      window.open(data.whatsapp_link, '_blank');
+      await fetchApi('/api/reports/', {
+        method: 'POST',
+        body: formData,
+        // FormData handles headers
+      });
+      toast.success('Report uploaded successfully');
+      loadData();
     } catch (err) {
-      alert('Could not generate WhatsApp link.');
-      console.error(err);
+      toast.error('Failed to upload report');
     }
-  };
-
-  // Tab filter logic
-  const filtered = {
-    pending:   requests.filter(r => (r.status === 'pending_elder' || r.status === 'returned_to_clerk') && !r.is_stamped),
-    awaiting:  requests.filter(r => r.is_stamped && r.status !== 'finalized' && r.status !== 'rejected'),
-    finalized: requests.filter(r => r.status === 'finalized'),
-    all:       requests,
-  }[activeTab] || [];
-
-  const stats = {
-    pending:   requests.filter(r => r.status === 'pending_elder' && !r.is_stamped).length,
-    awaiting:  requests.filter(r => r.is_stamped && !['finalized','rejected'].includes(r.status)).length,
-    finalized: requests.filter(r => r.status === 'finalized').length,
-    rejected:  requests.filter(r => r.status === 'rejected').length,
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <header className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Clerk Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage, stamp, and distribute service requests.</p>
-        </div>
-        <button
-          onClick={() => setIsMenuOpen(true)}
-          style={{ backgroundColor: '#C8102E' }}
-          className="hover:opacity-90 active:scale-95 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all hover:-translate-y-0.5 flex items-center"
-        >
-          <FileUp className="w-5 h-5 mr-2" /> New Request
-        </button>
-      </header>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Needs Stamp',  value: stats.pending,   color: 'text-amber-500',   border: 'hover:border-amber-200' },
-          { label: 'In Pipeline',  value: stats.awaiting,  color: 'text-blue-500',    border: 'hover:border-blue-200' },
-          { label: 'Finalized',    value: stats.finalized, color: 'text-emerald-500', border: 'hover:border-emerald-200' },
-          { label: 'Rejected',     value: stats.rejected,  color: 'text-red-500',     border: 'hover:border-red-200' },
-        ].map(s => (
-          <div key={s.label} className={`bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col ${s.border} transition-colors`}>
-            <span className="text-slate-500 text-sm font-medium">{s.label}</span>
-            <span className={`text-4xl font-bold mt-2 ${s.color}`}>{s.value}</span>
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 pb-20">
+      {/* Mobile-friendly Sidebar/Nav toggle could go here */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Module Switcher Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+              <LayoutDashboard className="text-blue-500" />
+              Church Clerk Portal
+            </h1>
+            <p className="text-slate-400 mt-1">Manage ministry requests and official reports.</p>
           </div>
-        ))}
-      </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="flex border-b border-slate-100 overflow-x-auto">
-          {TABS.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center px-5 py-4 text-sm font-bold whitespace-nowrap transition-all border-b-2 ${
-                  activeTab === tab.key
-                    ? 'border-[#C8102E] text-[#C8102E] bg-red-50/50'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Icon className="w-4 h-4 mr-2" />{tab.label}
-              </button>
-            );
-          })}
+          <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700">
+            <button
+              onClick={() => setActiveModule('requests')}
+              className={`px-6 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${
+                activeModule === 'requests' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FilePlus size={18} /> Requests
+            </button>
+            <button
+              onClick={() => setActiveModule('reports')}
+              className={`px-6 py-2 rounded-lg font-bold transition-all flex items-center gap-2 ${
+                activeModule === 'reports' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FileBarChart size={18} /> Reports
+            </button>
+          </div>
         </div>
 
-        {/* Table */}
-        {filtered.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 flex flex-col items-center">
-            <FileText className="w-12 h-12 text-slate-300 mb-3" />
-            <p>No requests in this category.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 text-sm font-semibold text-slate-500 bg-slate-50/50">
-                  <th className="py-4 px-6">Document</th>
-                  <th className="py-4 px-6">Submitted</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6">Stamped</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(req => (
-                  <tr key={req.id} className="border-b last:border-0 border-slate-50 hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6 font-medium text-slate-800 flex items-center">
-                      <FileText className="w-4 h-4 mr-2 text-sda-blue" />
-                      {req.document?.title}
-                    </td>
-                    <td className="py-4 px-6 text-slate-500 text-sm">
-                      {new Date(req.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-4 px-6"><StatusBadge status={req.status} /></td>
-                    <td className="py-4 px-6">
-                      {req.is_stamped
-                        ? <span className="text-emerald-600 text-sm font-semibold">✔ Stamped</span>
-                        : <span className="text-slate-400 text-sm">Not yet</span>}
-                    </td>
-                    <td className="py-4 px-6 text-right flex items-center justify-end gap-2">
-                      {/* View PDF */}
-                      <button
-                        onClick={() => setSelectedRequest(req)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-semibold underline flex items-center gap-1 transition-all"
+        {/* Action Bar */}
+        <div className="flex justify-end mb-6">
+          {activeModule === 'requests' ? (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowForm(!showForm)}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-xl flex items-center gap-2"
+            >
+              {showForm ? <XCircle size={20} /> : <FilePlus size={20} />}
+              {showForm ? 'Close Form' : 'New Ministry Request'}
+            </motion.button>
+          ) : (
+            <label className="cursor-pointer bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-bold shadow-xl flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <UploadCloud size={20} /> Upload PDF Report
+              <input type="file" className="hidden" accept=".pdf" onChange={handleReportUpload} />
+            </label>
+          )}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {showForm && activeModule === 'requests' ? (
+            <MinistryRequestForm onComplete={() => { setShowForm(false); loadData(); }} />
+          ) : (
+            <motion.div
+              key={activeModule}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid gap-6"
+            >
+              {activeModule === 'requests' ? (
+                <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl border border-slate-700/50 overflow-hidden shadow-2xl">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-900/50 border-b border-slate-700 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-6 py-4">Request For</th>
+                        <th className="px-6 py-4">To Church</th>
+                        <th className="px-6 py-4">Event Date</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50 text-sm">
+                      {requests.map(req => (
+                        <tr key={req.id} className="hover:bg-slate-700/20 transition-colors group">
+                          <td className="px-6 py-5">
+                            <div className="font-bold text-white">{req.invited_name}</div>
+                            <div className="text-xs text-slate-500">{req.request_type}</div>
+                          </td>
+                          <td className="px-6 py-5 text-slate-300">{req.receiving_church}</td>
+                          <td className="px-6 py-5 text-slate-300">
+                            {new Date(req.event_date).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-5">
+                            <StatusBadge status={req.status} approved={req.elder_signed} />
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => setSelectedRequest(req)}
+                                className="p-2 bg-slate-700 hover:bg-blue-600 rounded-lg transition-colors text-white"
+                                title="View Details"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              {req.status === 'approved' && (
+                                <a 
+                                  href={`/api/ministry-requests/${req.id}/download/`}
+                                  className="p-2 bg-slate-700 hover:bg-emerald-600 rounded-lg transition-colors text-white"
+                                  title="Download PDF"
+                                >
+                                  <FileText size={18} />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {requests.length === 0 && (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-12 text-center text-slate-500 italic">
+                            No ministry requests found matching your current view.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {reports.map(report => (
+                    <motion.div
+                      key={report.id}
+                      whileHover={{ y: -5 }}
+                      className="bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 flex flex-col gap-4 shadow-xl"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl">
+                          <FileBarChart size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 uppercase">{report.quarter} {report.year}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-white leading-tight">{report.title}</h3>
+                        <p className="text-xs text-slate-500 mt-1">Uploaded {new Date(report.timestamp).toLocaleDateString()}</p>
+                      </div>
+                      <a 
+                        href={`/api/reports/${report.id}/download/`}
+                        className="mt-auto flex items-center justify-center gap-2 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold transition-all text-sm"
                       >
-                        <Eye className="w-4 h-4" /> View & Process
-                      </button>
-
-                      {/* Track Progress */}
-                      <button
-                        onClick={() => setTrackingRequest(req)}
-                        className="text-slate-500 hover:text-slate-800 text-sm font-semibold underline flex items-center gap-1 transition-all"
-                      >
-                        <MapPin className="w-4 h-4" /> Track
-                      </button>
-
-                      {/* Apply Stamp (Clerk's Signature) */}
-                      {!req.is_stamped && ['pending_elder', 'returned_to_clerk'].includes(req.status) && (
-                        <TruckButton
-                          onClick={() => handleApplyStamp(req.id)}
-                          label="Verify & Stamp"
-                          successLabel="Stamped & Sent"
-                          disabled={stampingId === req.id}
-                        />
-                      )}
-
-                      {/* Send via WhatsApp */}
-                      {req.status === 'finalized' && (
-                        <TruckButton
-                           onClick={() => handleWhatsApp(req.id)}
-                           label="Send WhatsApp"
-                           successLabel="Message Sent"
-                           className="!bg-emerald-600"
-                        />
-                      )}
-
-                      {/* Show rejection reason */}
-                      {req.status === 'rejected' && req.rejection_reason && (
-                        <span className="text-red-500 text-xs italic ml-2" title={req.rejection_reason}>
-                          Reason: {req.rejection_reason.slice(0, 40)}{req.rejection_reason.length > 40 ? '…' : ''}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        <UploadCloud size={16} /> Download PDF
+                      </a>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
-      {/* Viewer Modal */}
-      {selectedRequest && (
-        <DocumentViewer 
-          request={selectedRequest} 
-          onClose={() => { setSelectedRequest(null); loadRequests(); }}
-          onActionSuccess={(type) => {
-             if (type === 'approve') handleApplyStamp(selectedRequest.id);
-          }}
-        />
-      )}
-
-      {/* Tracker Modal */}
-      {trackingRequest && (
-        <DocumentTracker 
-          request={trackingRequest} 
-          onClose={() => setTrackingRequest(null)} 
-        />
-      )}
-
-      {/* Upload Modal */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-slate-800">New Service Request</h3>
-              <button onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleUpload} className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Document Title</label>
-                <input
-                  type="text" required value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary-500 outline-none text-slate-900"
-                  placeholder="e.g. Funeral Service 12th March"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Upload Document (PDF)</label>
-                <input
-                  type="file" required accept=".pdf,.doc,.docx"
-                  onChange={e => setFile(e.target.files[0])}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 text-slate-900"
-                />
-              </div>
-              <div className="pt-4 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsMenuOpen(false)}
-                  className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading}
-                  style={{ backgroundColor: '#C8102E' }}
-                  className={`px-6 py-2.5 text-white font-medium rounded-xl shadow-md hover:-translate-y-0.5 transition-all ${loading ? 'opacity-70' : ''}`}>
-                  {loading ? 'Uploading…' : 'Submit Request'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       <GooeyFooter />
     </div>
   );
+};
+
+const StatusBadge = ({ status, approved }) => {
+  if (approved) return <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs font-bold border border-emerald-500/30 flex items-center gap-1 w-fit"><CheckCircle size={12} /> Finalized</span>;
+  
+  const configs = {
+    pending: { label: 'Awaiting Approvals', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+    rejected: { label: 'Rejected', class: 'bg-red-500/20 text-red-400 border-red-500/30' }
+  };
+  const config = configs[status] || configs.pending;
+  return <span className={`px-3 py-1 ${config.class} rounded-full text-xs font-bold border flex items-center gap-1 w-fit`}><Clock size={12} /> {config.label}</span>;
 };
 
 export default ClerkDashboard;
